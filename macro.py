@@ -17,13 +17,14 @@ def find_and_click(image_path, confidence_level=0.8):
         center_x, center_y = pyautogui.center(location)
         
         # Note: If your numpad buttons are small, you might want to change 15 to 10
-        offset_x = random.randint(-15, 15)
-        offset_y = random.randint(-15, 15)
+        offset_x = random.randint(-7, 7)
+        offset_y = random.randint(-7, 7)
         
         randomized_x = center_x + offset_x
         randomized_y = center_y + offset_y
         
         pyautogui.click(randomized_x, randomized_y)
+       
         print(f"Successfully clicked {image_path} at (X: {randomized_x}, Y: {randomized_y})")
         return True
     except pyautogui.ImageNotFoundException:
@@ -58,6 +59,14 @@ def read_screen_text(region=None):
 
 def solve_math(text):
     """Safely evaluates a math string and returns the integer result."""
+    # If text is exactly 2 digits, make it "first - second"
+    if len(text) == 2 and text.isdigit():
+        text = text[0] + '-' + text[1]
+    
+    # Check if the middle character is "4" in the original text
+    if len(text) == 3 and text[1] == '4':
+        text = text[0] + '+' + text[2]
+    
     # Strip out any random garbage characters that aren't math
     clean_text = re.sub(r'[^0-9+\-*xX/]', '', text)
     # Replace the letter x with the multiply symbol just in case
@@ -65,7 +74,7 @@ def solve_math(text):
     
     if not clean_text:
         return None
-        
+    
     try:
         result = int(eval(clean_text))
         return result
@@ -83,15 +92,26 @@ def click_numpad(answer):
     find_and_click("answer.png", confidence_level=0.85)
     
     # 1. Click each digit
-    for digit in answer_str:
-        image_path = f"numpad/{digit}.png" 
-        success = find_and_click(image_path, confidence_level=0.85) 
-        
-        if not success:
-            print(f"Failed to find {image_path}. Aborting this attempt.")
-            return False
+    if answer != 11:
+        for digit in answer_str:
+            image_path = f"numpad/{digit}.png" 
+            success = find_and_click(image_path, confidence_level=0.98) 
             
-        time.sleep(random.uniform(0.3, 0.6))
+            if not success:
+                print(f"Failed to find {image_path}. Aborting this attempt.")
+                return False
+                
+            time.sleep(random.uniform(0.3, 0.6))
+    else:
+        for digit in answer_str:
+            image_path = f"numpad/{digit}.png" 
+            success = find_and_click(image_path, confidence_level=0.98) 
+            pyautogui.moveTo(100, 100)
+            if not success:
+                print(f"Failed to find {image_path}. Aborting this attempt.")
+                return False
+                
+            time.sleep(random.uniform(0.3, 0.6))
         
     # 2. Click the green checkmark on the numpad
     print("Clicking numpad checkmark (v.png)...")
