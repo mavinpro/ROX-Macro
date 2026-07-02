@@ -44,7 +44,7 @@ def read_screen_text(region=None):
     img_np = np.array(screenshot)
     
     gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-    
+    gray = cv2.resize(gray, None, fx=3, fy=3)
     # RAISED THRESHOLD: 240 will drop the gray background and keep only the pure white numbers
     _, binary = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)
     
@@ -60,8 +60,10 @@ def read_screen_text(region=None):
 def solve_math(text):
     """Safely evaluates a math string and returns the integer result."""
     # If text is exactly 2 digits, make it "first - second"
-    if len(text) == 2 and text.isdigit():
-        text = text[0] + '-' + text[1]
+    if len(text) != 3:
+        time.sleep(20)
+    # if len(text) == 2 and text.isdigit():
+    #     text = text[0] + '-' + text[1]
     
     # Check if the middle character is "4" in the original text
     if len(text) == 3 and text[1] == '4':
@@ -104,9 +106,9 @@ def click_numpad(answer):
             time.sleep(random.uniform(0.3, 0.6))
     else:
         for digit in answer_str:
-            image_path = f"numpad/{digit}.png" 
-            success = find_and_click(image_path, confidence_level=0.98) 
-            pyautogui.moveTo(100, 100)
+            image_path = f"numpad/1.png" 
+            success = find_and_click(image_path, confidence_level=0.80) 
+            
             if not success:
                 print(f"Failed to find {image_path}. Aborting this attempt.")
                 return False
