@@ -9,7 +9,7 @@ import re
 # IMPORTANT: Tell Python where you installed Tesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-def find_and_click(image_path, confidence_level=0.8):
+def find_and_click(image_path, confidence_level=0.75):
     """Searches for an image and clicks it with a random offset."""
     print(f"Searching for {image_path} to click...")
     try:
@@ -61,7 +61,9 @@ def solve_math(text):
     """Safely evaluates a math string and returns the integer result."""
     # If text is exactly 2 digits, make it "first - second"
     if len(text) != 3:
-        time.sleep(20)
+        print("Execution paused.")
+        input("Press Enter to continue...")
+        print("Resuming...")
     # if len(text) == 2 and text.isdigit():
     #     text = text[0] + '-' + text[1]
     
@@ -104,7 +106,7 @@ def click_numpad(answer):
                 return False
                 
             time.sleep(random.uniform(0.3, 0.6))
-    else:
+    elif answer == 11:
         for digit in answer_str:
             image_path = f"numpad/1.png" 
             success = find_and_click(image_path, confidence_level=0.80) 
@@ -163,26 +165,26 @@ try:
                     print("==============================")
                     
                     # Wait 1 second for the numpad UI to fully load in the game
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                     
                     # Click the digits, the checkmark, and the confirm button
                     click_numpad(answer)
                     
                     # Wait a few seconds for the captcha to clear before resuming
                     print("Waiting for captcha UI to close...")
-                    time.sleep(1)
+                    time.sleep(0.6)
                 else:
                     print("Could not evaluate the text as math.")
                     print("==============================")
             else:
                 print("Looked below the image, but no readable text was found.")
                 
-            time.sleep(1)
+            time.sleep(0.7)
             continue 
             
         # Normal gardening loop
-        find_and_click('target.png', confidence_level=0.8)
-        time.sleep(0.7) 
+        find_and_click('target.png', confidence_level=0.75)
+        time.sleep(0.3) 
         
 except KeyboardInterrupt:
     print("\nMacro stopped by user.")
