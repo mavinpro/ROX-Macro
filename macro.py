@@ -6,6 +6,10 @@ import cv2
 import numpy as np
 import re  
 
+# Add these two lines for RapidOCR
+from rapidocr_onnxruntime import RapidOCR
+rapid_engine = RapidOCR()
+
 # IMPORTANT: Tell Python where you installed Tesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -43,30 +47,55 @@ def read_screen_text(region=None):
     screenshot = pyautogui.screenshot(region=region)
     img_np = np.array(screenshot)
     
+    # Save the raw, unprocessed image for debugging
+    original_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+    cv2.imwrite("debug_crop_original.png", original_bgr)
+    
+    # 1. Convert to Grayscale and Resize (3x)
     gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
     gray = cv2.resize(gray, None, fx=3, fy=3)
-    # RAISED THRESHOLD: 240 will drop the gray background and keep only the pure white numbers
+    
+    # 2. Add a slight blur to smooth out the edges
+    # blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    
+    # 3. THRESH_BINARY_INV: Forces White Text -> Black, Dark Background -> White
     _, binary = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)
     
-    processed_img = cv2.bitwise_not(binary)
-    cv2.imwrite("debug_crop.png", processed_img)
+    # 4. Dilate the white background to thin the black text
+    # This eats away the thick diamond blob in the center of the '+'
+    kernel = np.ones((2, 2), np.uint8)
+    processed_img = cv2.dilate(binary, kernel, iterations=1)
+
+    processed_img = cv2.bitwise_not(processed_img)
+    # Save the processed image
+    cv2.imwrite("debug_crop_processed.png", processed_img)
     
     # Tell Tesseract to only expect numbers and math symbols on a single line (PSM 7)
-    custom_config = r'--psm 7 -c tessedit_char_whitelist=0123456789+-*xX='
+    custom_config = r'--psm 7 -c tessedit_char_whitelist=0123456789+-*'
     
     detected_text = pytesseract.image_to_string(processed_img, config=custom_config)
     return detected_text.strip()
 
 def solve_math(text):
     """Safely evaluates a math string and returns the integer result."""
-    # If text is exactly 2 digits, make it "first - second"
-    if len(text) != 3:
-        print("Execution paused.")
-        input("Press Enter to continue...")
-        print("Resuming...")
-    # if len(text) == 2 and text.isdigit():
-    #     text = text[0] + '-' + text[1]
     
+    # If Tesseract didn't get exactly 3 characters, fallback to RapidOCR
+    if len(text) != 3:
+        print(f"Tesseract misread '{text}'. Falling back to RapidOCR...")
+        
+        # Read the debug image we saved in read_screen_text
+        result, _ = rapid_engine('debug_crop_processed.png')
+        
+        if result:
+            # RapidOCR returns a list. result[0][1] is the text string.
+            text = result[0][1]
+            print(f"RapidOCR detected: {text}")
+        else:
+            print("RapidOCR could not detect any text.")
+            print("Execution paused.")
+            input("Press Enter to continue...")
+            print("Resuming...")
+
     # Check if the middle character is "4" in the original text
     if len(text) == 3 and text[1] == '4':
         text = text[0] + '+' + text[2]
@@ -141,12 +170,12 @@ try:
             print("Pending image detected! Checking for math captcha...")
             
             center_x, center_y = pyautogui.center(pending_box)
-            read_width = 200
-            read_height = 50
+            read_width = 70
+            read_height = 21
             
             read_x = int(center_x - (read_width / 2))
             read_x = max(0, read_x) 
-            read_y = int(pending_box.top + pending_box.height - 10)
+            read_y = int(pending_box.top + pending_box.height + 11)
             
             target_region = (read_x, read_y, read_width, read_height)
             
